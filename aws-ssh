@@ -1,0 +1,92 @@
+#!/bin/bash
+# set -e
+
+##################################################
+# Vars
+##################################################
+BLUE="\033[01;33m"
+GREEN="\033[01;32m"
+RED="\033[01;31m"
+RESET="\033[00m"
+##################################################
+
+function usage {
+  cat << EOM
+NAME
+    $0 -- find corresponding public ip for aws instance
+
+SYNOPSIS
+    $0 -p PROFILE -r REGION -a IPADDRESS -u SSH_USER -k SSK_KEY_LOCATION
+
+EXAMPLES
+    aws-ssh -p default -r ap-southeast-2 -a 10.0.0.1 -u test -k /home/test/.ssh/key.pem
+EOM
+  exit 1
+}
+
+function log ()
+{
+  status=$1
+  msg=$2
+  case $status in
+    error)
+      echo -e "${RED}[ERROR] - ${msg}${RESET}"
+      ;;
+    success)
+      echo -e "${GREEN}${msg}${RESET}"
+      ;;
+    info)
+      echo -e "${BLUE}${msg}${RESET}"
+      ;;
+  esac
+}
+
+function aws_ssh ()
+{
+	PUBLIC_IP_ADDRESS=`aws --profile ${PROFILE} --region ${REGION} ec2 describe-instances --filters "Name=private-ip-address,Values=${IPADDRESS}" --query 'Reservations[].Instances[].PublicIpAddress' --output text`
+	TAGS=`aws --profile ${PROFILE} --region ${REGION} ec2 describe-instances --filters "Name=private-ip-address,Values=${IPADDRESS}" --query 'Reservations[].Instances[].Tags[]' --output text`
+	if [ -z "${PUBLIC_IP_ADDRESS}" ];
+	then
+	  log error "Instance with Private IP ${IPADDRESS} not associated with Public IP in AWS ${PROFILE} account in ${REGION}"
+	else
+	  log success "Private IP => ${IPADDRESS}"
+	  log success "Public IP  => ${PUBLIC_IP_ADDRESS}"
+	  log info "TAGS\n${TAGS}"
+    ssh -i $SSH_KEY $SSH_USER@$PUBLIC_IP_ADDRESS
+	fi
+}
+
+##################################################
+# Main
+##################################################
+
+# Parse incoming arguments
+while getopts "p:r:a:k:u:" opt; do
+  case $opt in
+    p)
+      PROFILE=${OPTARG}
+      ;;
+    r)
+      REGION=${OPTARG}
+      ;;
+    a)
+      IPADDRESS=${OPTARG}
+      ;;
+    k)
+      SSH_KEY=${OPTARG}
+      ;;
+    u)
+      SSH_USER=${OPTARG}
+      ;;
+    *)
+      usage
+      ;;
+  esac
+done
+
+if [ -z "${PROFILE}" ] || [ -z "${REGION}" ] || [ -z "${IPADDRESS}" ] || [ -z "${SSH_KEY}" ] || [ -z "${SSH_USER}" ];
+then
+  usage
+fi
+
+aws_ssh
