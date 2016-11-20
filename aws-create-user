@@ -1,0 +1,92 @@
+#!/bin/bash
+# set -e
+
+##################################################
+# Vars
+##################################################
+BLUE="\033[01;33m"
+GREEN="\033[01;32m"
+RED="\033[01;31m"
+RESET="\033[00m"
+##################################################
+
+function usage {
+  cat << EOM
+NAME
+    $0 -- create user in AWS Account
+
+SYNOPSIS
+    $0 -u user_name -a account_name -g group
+
+EXAMPLES
+    aws-create-user -u Bob -a dev -g admin
+EOM
+  exit 1
+}
+
+function log ()
+{
+  status=$1
+  msg=$2
+  case $status in
+    error)
+      echo -e "${RED}${msg}${RESET}"
+      ;;
+    success)
+      echo -e "${GREEN}${msg}${RESET}"
+      ;;
+    info)
+      echo -e "${BLUE}${msg}${RESET}"
+      ;;
+  esac
+}
+
+function validate_group ()
+{
+  GROUP_LIST=`aws --profile ${ACCOUNT} iam list-groups --query Groups[].GroupName --output text`
+  if [ -z "${GROUP_LIST##*$GROUP*}" ];
+  then
+    create_user
+  else
+    log error "Group Name should be one of"
+    log info "${GROUP_LIST}"
+  fi
+}
+
+function create_user ()
+{
+  aws --profile ${ACCOUNT} iam create-user --user-name ${USERNAME} > ${USERNAME}.txt
+  aws --profile ${ACCOUNT} iam add-user-to-group --group-name ${GROUP} --user-name ${USERNAME} >> ${USERNAME}.txt
+  aws --profile ${ACCOUNT} iam create-login-profile --user-name ${USERNAME} --password 'nG7w3otsbVZvai&' --password-reset-required >> ${USERNAME}.txt
+  aws --profile ${ACCOUNT} iam create-access-key --user-name ${USERNAME} >> ${USERNAME}.txt
+  log success "`cat ${USERNAME}.txt`"
+}
+
+##################################################
+# Main
+##################################################
+
+# Parse incoming arguments
+while getopts "u:a:g:" opt; do
+  case $opt in
+    u)
+      USERNAME=${OPTARG}
+      ;;
+    a)
+      ACCOUNT=${OPTARG}
+      ;;
+    g)
+      GROUP=${OPTARG}
+      ;;
+    *)
+      usage
+      ;;
+  esac
+done
+
+if [ -z "${USERNAME}" ] || [ -z "${ACCOUNT}" ] || [ -z "${GROUP}" ];
+then
+  usage
+fi
+
+validate_group
