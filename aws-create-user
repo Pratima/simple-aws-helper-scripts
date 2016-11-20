@@ -57,7 +57,7 @@ function create_user ()
 {
   aws --profile ${ACCOUNT} iam create-user --user-name ${USERNAME} > ${USERNAME}.txt
   aws --profile ${ACCOUNT} iam add-user-to-group --group-name ${GROUP} --user-name ${USERNAME} >> ${USERNAME}.txt
-  aws --profile ${ACCOUNT} iam create-login-profile --user-name ${USERNAME} --password 'nG7w3otsbVZvai&' --password-reset-required >> ${USERNAME}.txt
+  aws --profile ${ACCOUNT} iam create-login-profile --user-name ${USERNAME} --password 'change-password-here&' --password-reset-required >> ${USERNAME}.txt
   aws --profile ${ACCOUNT} iam create-access-key --user-name ${USERNAME} >> ${USERNAME}.txt
   log success "`cat ${USERNAME}.txt`"
 }
