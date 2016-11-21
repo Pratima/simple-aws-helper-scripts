@@ -16,10 +16,10 @@ NAME
     $0 -- create user in AWS Account
 
 SYNOPSIS
-    $0 -u user_name -a account_name -g group
+    $0 -u iam-user-name -a aws-account-name -g iam-group
 
 EXAMPLES
-    aws-create-user -u Bob -a dev -g admin
+    iam-user-create -u Bob -a dev -g admin
 EOM
   exit 1
 }

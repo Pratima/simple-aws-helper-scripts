@@ -19,7 +19,7 @@ SYNOPSIS
     $0 -p PROFILE -r REGION -a IPADDRESS -u SSH_USER -k SSK_KEY_LOCATION
 
 EXAMPLES
-    aws-ssh -p default -r ap-southeast-2 -a 10.0.0.1 -u test -k /home/test/.ssh/key.pem
+    ec2-ssh -p default -r ap-southeast-2 -a 10.0.0.1 -u test -k /home/test/.ssh/key.pem
 EOM
   exit 1
 }
