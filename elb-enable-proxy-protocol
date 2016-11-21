@@ -1,0 +1,91 @@
+#!/bin/bash
+# set -e
+
+##################################################
+# Vars
+##################################################
+BLUE="\033[01;33m"
+GREEN="\033[01;32m"
+RED="\033[01;31m"
+RESET="\033[00m"
+##################################################
+
+function usage {
+  cat << EOM
+NAME
+    $0 -- enable proxy protocol in AWS ELB
+
+SYNOPSIS
+    $0 -r region -p aws-account-name -e aws-elb-name -p elb-instance-port
+
+EXAMPLES
+    elb-enable-proxy-protocol -r region -p aws-account-name -e aws-elb-name -p elb-instance-port
+EOM
+  exit 1
+}
+
+function log ()
+{
+  status=$1
+  msg=$2
+  case $status in
+    error)
+      echo -e "${RED}${msg}${RESET}"
+      ;;
+    success)
+      echo -e "${GREEN}${msg}${RESET}"
+      ;;
+    info)
+      echo -e "${BLUE}${msg}${RESET}"
+      ;;
+  esac
+}
+
+aws_opts="--profile ${profile} --region ${region}"
+
+function enable_proxy_protocol {
+
+  if [ "$ELB_NAME" == "" ]
+  then
+    log error "No ELB Name specified"
+    exit 1
+  else
+    ProxyProtocolEnabled=`aws ${aws_opts} elb describe-load-balancers --load-balancer-name ${ELB_NAME} | jq ".LoadBalancerDescriptions[].Policies.OtherPolicies | contains([\"EnableProxyProtocol\"])"`
+
+    if [ $ProxyProtocolEnabled ]; then
+      log success "Proxy Protocol is already enabled on ${ELB_NAME}"
+    else
+  	  eval aws ${aws_opts} elb create-load-balancer-policy --load-balancer-name ${ELB_NAME} --policy-name EnableProxyProtocol  --policy-type-name ProxyProtocolPolicyType --policy-attributes AttributeName=ProxyProtocol,AttributeValue=True
+  	  eval aws ${aws_opts} elb set-load-balancer-policies-for-backend-server --load-balancer-name ${ELB_NAME} --instance-port ${INSTANCE_PORT} --policy-names EnableProxyProtocol
+  	  log success "Proxy Protocol is enabled on instance port ${INSTANCE_PORT} for ${ELB_NAME}"
+	fi
+  fi
+}
+
+# Parse incoming arguments
+while getopts "r:a:e:p:" opt; do
+  case $opt in
+    r)
+      REGION=${OPTARG}
+      ;;
+    a)
+      ACCOUNT=${OPTARG}
+      ;;
+    e)
+      ELB_NAME=${OPTARG}
+      ;;
+    p)
+      INSTANCE_PORT=${OPTARG}
+      ;;
+    *)
+      usage
+      ;;
+  esac
+done
+
+if [ -z "${REGION}" ] || [ -z "${ACCOUNT}" ] || [ -z "${ELB_NAME}" ] || [ -z "${INSTANCE_PORT}" ];
+then
+  usage
+fi
+
+enable_proxy_protocol
